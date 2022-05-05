@@ -1,3 +1,10 @@
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.hpp.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/version.hpp"
+)
+
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+
 set(PROGS
   sc
 )

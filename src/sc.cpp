@@ -11,6 +11,8 @@
 #include <kseq.h>
 #include <cxxopts.hpp>
 
+#include <version.hpp>
+
 KSEQ_INIT(gzFile, gzread)
 
 int main(int argc, char* argv[])
@@ -20,7 +22,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        cxxopts::Options options("sc", "sc (amstools) 0.1 written by Armin Sobhani");
+        cxxopts::Options options("sc", AMSTOOLS_TITLE);
         options.custom_help(
             "[OPTION]... [FILE]...\n"
             // "  sc [OPTION]... --files-from=F\n"
@@ -57,10 +59,7 @@ int main(int argc, char* argv[])
 
         if (result.count("version"))
         {
-            std::cout << "sc (amstools) 0.1\n"
-                      << "Copyright (C) 2022 Armin Sobhani <arminms@gmail.com>\n"
-                      << "The MIT License\n"
-                      << "Repository: <https://github.com/arminms/amstools>"
+            std::cout << AMSTOOLS_VERSION
                       << std::endl;
             return 0 ;
         }

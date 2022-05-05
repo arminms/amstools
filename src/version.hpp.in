@@ -1,0 +1,8 @@
+#define AMSTOOLS_VERSION_MAJOR @amstools_VERSION_MAJOR@
+#define AMSTOOLS_VERSION_MINOR @amstools_VERSION_MINOR@
+#define AMSTOOLS_TITLE "sc (amstools) @amstools_VERSION_MAJOR@.@amstools_VERSION_MINOR@ " \
+    "written by Armin Sobhani"
+#define AMSTOOLS_VERSION "sc (amstools) @amstools_VERSION_MAJOR@.@amstools_VERSION_MINOR@\n" \
+    "Copyright (C) 2022 Armin Sobhani <arminms@gmail.com>\n" \
+    "The MIT License\n" \
+    "Repository: <https://github.com/arminms/amstools>"
