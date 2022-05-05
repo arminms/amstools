@@ -12,3 +12,10 @@ foreach(PROG ${PROGS})
   )
   install(TARGETS ${PROG_TARGET} RUNTIME DESTINATION bin COMPONENT ${PROG_TARGET})
 endforeach()
+
+macro(do_test prog arg result)
+    add_test(test-${prog}${arg} ${prog} ${arg})
+    set_tests_properties(test-${prog}${arg} PROPERTIES PASS_REGULAR_EXPRESSION ${result})
+endmacro(do_test)
+ 
+do_test(sc -p "Option ‘p’ does not exist")

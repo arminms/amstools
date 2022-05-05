@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
                 if (0 == result.count("seqs")
                 &&  0 == result.count("bps")
                 &&  0 == result.count("max-seq-length") )
-                    std::cout << seqsn << '\t' << bpsn << file << std::endl;
+                    std::cout << seqsn << '\t' << bpsn << '\t' << file << std::endl;
                 else
                 {
                     if (result.count("seqs"))
