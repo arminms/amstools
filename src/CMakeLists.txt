@@ -25,4 +25,4 @@ macro(do_test prog arg result)
     set_tests_properties(test-${prog}${arg} PROPERTIES PASS_REGULAR_EXPRESSION ${result})
 endmacro(do_test)
  
-do_test(sc -p "Option .[‘']*p.[‘']* does not exist")
+do_test(sc -p "Option .[‘'’]*p.[‘'’]* does not exist")
