@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         cxxopts::Options options("sc", AMSTOOLS_TITLE);
         options.custom_help(
             "[OPTION]... [FILE]...\n"
-            // "  sc [OPTION]... --files-from=F\n"
+            "  sc [OPTION]... --files-from=F\n"
             "Print seqs and bps counts for each FILE, and total values if more than one\n"
             "FILE is specified. Both FastA and FastQ (optionally gzipped) files are supported.\n\n"
             "With no FILE, or when FILE is -, read standard input.\n\n"
@@ -36,11 +36,11 @@ int main(int argc, char* argv[])
         ("b,bps", "print the base pair counts")
         ("s,seqs", "print the sequence counts")
         ("m,max-seq-length", "print the longest sequence counts")
-        // ("f,files-from"
-        // ,   "read input from the files specified by\n"
-        //     "  NUL-terminated names in file F;\n"
-        //     "  If F is - then read names from standard input"
-        // ,   cxxopts::value<std::string>(), "F" )
+        ("f,files-from"
+        ,   "read input from the files specified by\n"
+            "  names separated by newlines in file F;\n"
+            "  If F is - then read names from standard input"
+        ,   cxxopts::value<std::string>(), "F" )
         ("help", "display this help and exit")
         ("version", "output version information and exit")
         ("files", "files", cxxopts::value<std::vector<std::string>>())
@@ -64,15 +64,33 @@ int main(int argc, char* argv[])
             return 0 ;
         }
 
-        if (result.count("files"))
+        std::vector<std::string> files_from;
+        if (result.count("files-from"))
         {
-            auto& files = result["files"].as<std::vector<std::string>>();
+            auto& file = result["files-from"].as<std::string>();
+            gzFile fp = file == "-"
+            ?   gzdopen(fileno(stdin), "r")
+            :   gzopen(file.c_str(), "r");
+            kstream_t* ks = ks_init(fp);
+            kstring_t str = {0,0,0};
+            while (ks_getuntil(ks, '\n', &str, 0) >= 0)
+                files_from.emplace_back(str.s);
+            ks_destroy(ks);
+            gzclose(fp);
+            free(str.s);
+        }
+
+        if (result.count("files") || result.count("files-from"))
+        {
+            auto& files = result.count("files")
+            ?   result["files"].as<std::vector<std::string>>()
+            :   files_from;
             size_t seqsn_total{}, bpsn_total{}, seqmax_total{};
             for (const auto& file : files)
             {
                 size_t seqsn{}, bpsn{}, seqmax{};
                 gzFile fp = gzopen(file.c_str(), "r");
-                kseq_t *seq = kseq_init(fp);
+                kseq_t* seq = kseq_init(fp);
                 while (kseq_read(seq) >= 0)
                 {
                     ++seqsn;
