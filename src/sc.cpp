@@ -64,24 +64,33 @@ int main(int argc, char* argv[])
             return 0 ;
         }
 
-        std::vector<std::string> files_from;
-        if (result.count("files-from"))
-        {
-            auto& file = result["files-from"].as<std::string>();
-            gzFile fp = file == "-"
-            ?   gzdopen(fileno(stdin), "r")
-            :   gzopen(file.c_str(), "r");
-            kstream_t* ks = ks_init(fp);
-            kstring_t str = {0,0,0};
-            while (ks_getuntil(ks, '\n', &str, 0) >= 0)
-                files_from.emplace_back(str.s);
-            ks_destroy(ks);
-            gzclose(fp);
-            free(str.s);
-        }
-
         if (result.count("files") || result.count("files-from"))
         {
+            if (result.count("files") && result.count("files-from"))
+            {
+                std::cerr << "sc: file operands cannot be combinded with --files-from"
+                          << std::endl;
+                return 1;
+            }
+
+            std::vector<std::string> files_from;
+            if (result.count("files-from"))
+            {
+                auto& file = result["files-from"].as<std::string>();
+                gzFile fp = file == "-"
+                ?   gzdopen(fileno(stdin), "r")
+                :   gzopen(file.c_str(), "r");
+                if (nullptr == fp)
+                    std::cerr << "sc: error reading " << file << std::endl;
+                kstream_t* ks = ks_init(fp);
+                kstring_t str = {0,0,0};
+                while (ks_getuntil(ks, '\n', &str, 0) >= 0)
+                    files_from.emplace_back(str.s);
+                ks_destroy(ks);
+                gzclose(fp);
+                free(str.s);
+            }
+
             auto& files = result.count("files")
             ?   result["files"].as<std::vector<std::string>>()
             :   files_from;
@@ -89,7 +98,14 @@ int main(int argc, char* argv[])
             for (const auto& file : files)
             {
                 size_t seqsn{}, bpsn{}, seqmax{};
-                gzFile fp = gzopen(file.c_str(), "r");
+                gzFile fp = file == "-"
+                ?   gzdopen(fileno(stdin), "r")
+                :   gzopen(file.c_str(), "r");
+                if (nullptr == fp)
+                {
+                    std::cerr << "error reading:\t\t" << file << std::endl;
+                    continue;
+                }
                 kseq_t* seq = kseq_init(fp);
                 while (kseq_read(seq) >= 0)
                 {
@@ -175,7 +191,7 @@ int main(int argc, char* argv[])
     }
     catch(const cxxopts::OptionException& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "sc: " << e.what() << std::endl;
         return 1;
     }
 }
