@@ -22,15 +22,16 @@ int main(int argc, char* argv[])
 
     try
     {
-        cxxopts::Options options("sc", AMSTOOLS_TITLE);
+        cxxopts::Options options("sc", " (amstools) -- Sequence Count\n");
         options.custom_help(
             "[OPTION]... [FILE]...\n"
-            "  sc [OPTION]... --files-from=F\n"
-            "Print seqs and bps counts for each FILE, and total values if more than one\n"
-            "FILE is specified. Both FastA and FastQ (optionally gzipped) files are supported.\n\n"
-            "With no FILE, or when FILE is -, read standard input.\n\n"
-            "The options below may be used to select which counts are printed, always in\n"
-            "the following order: seqs, bps, maximum sequence length."
+            "  sc [OPTION]... --files-from=F\n\n"
+            "Print seqs and bps counts for each FILE, and total values if more "
+            "than\none FILE is specified. Both FastA and FastQ (optionally "
+            "gzipped) files\nare supported.\n\nWith no FILE, or when FILE is -,"
+            " read standard input.\n\nThe options below may be used to select "
+            "which counts are printed, always in\nthe following order: seqs, "
+            "bps, maximum sequence length."
         );
         options.add_options()
         ("b,bps", "print the base pair counts")
@@ -53,13 +54,16 @@ int main(int argc, char* argv[])
 
         if (result.count("help"))
         {
-            std::cout << options.help() << std::endl;
+            std::cout << options.program()
+                      << options.help()
+                      << std::endl;
             return 0 ;
         }
 
         if (result.count("version"))
         {
-            std::cout << AMSTOOLS_VERSION
+            std::cout << options.program()
+                      << AMSTOOLS_VERSION
                       << std::endl;
             return 0 ;
         }
