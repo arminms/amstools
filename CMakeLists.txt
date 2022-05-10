@@ -4,7 +4,7 @@ include(cmake/BuildType.cmake)
 
 project(
   amstools
-  VERSION 0.1
+  VERSION 0.2
   DESCRIPTION "Collection of fast and efficient biological sequence tools"
   LANGUAGES CXX
 )
@@ -17,7 +17,7 @@ if(EXISTS "${LOC_PATH}")
 endif()
 
 ## must include after the project call due to GNUInstallDirs requiring a
-## language be enabled (IE. CXX)
+## language be enabled
 #
 include(GNUInstallDirs)
 
