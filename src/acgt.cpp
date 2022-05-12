@@ -44,14 +44,13 @@ int main(int argc, char* argv[])
         )
         (   "f,files-from"
         ,   "read input from the files specified by\n"
-            "  names separated by newlines in file F;\n"
+            "  names separated by newlines in file F\n"
             "  If F is - then read names from standard input"
         ,   cxxopts::value<std::string>()
         ,   "F"
         )
         (   "r,residues"
-        ,   "list of characters to count as residues;\n"
-            "  If R is 'all' then count all characters"
+        ,   "list of characters to count as residues\n"
         ,   cxxopts::value<std::string>()
         ->  default_value("ACGT")
         ->  implicit_value("ACGT")
@@ -98,6 +97,27 @@ int main(int argc, char* argv[])
             return 1;
         }
 
+        // printing header
+        auto& residues = result["residues"].as<std::string>();
+        std::cout << std::setw(10) << std::left << "#Seq" << ' '
+                  << std::setw(10) << std::left << "#Res" << ' ';
+        if ( result.count("residues")
+        || (0 == result.count("GC-Content")
+        &&  0 == result.count("AT-Content")
+        &&  0 == result.count("residues") ) )
+        {
+            for (size_t i = 0; i < residues.size(); ++i)
+                std::cout << '#' << std::setw(10) << std::left << residues[i];
+            for (size_t i = 0; i < residues.size(); ++i)
+                std::cout << '%' << std::setw(6) << std::left << residues[i];
+        }
+        if (result.count("AT-Content"))
+            std::cout << std::setw(7) << std::left << "%AT";
+        if (result.count("GC-Content"))
+            std::cout << std::setw(7) << std::left << "%GC";
+        std::cout << "File\n";
+
+        // making file list
         std::vector<std::string> file_stdin{ "-" };
         auto& files_in = result.count("files")
         ?   result["files"].as<std::vector<std::string>>()
@@ -152,43 +172,9 @@ int main(int argc, char* argv[])
             kseq_destroy(seq);
             gzclose(fp);
 
-            // printing headers
-            auto& residues = result["residues"].as<std::string>();
-            std::cout << std::setw(10) << std::left << "#Seq" << ' '
-                        << std::setw(10) << std::left << "#Res" << ' ';
-            if ( result.count("residues")
-            || (0 == result.count("GC-Content")
-            &&  0 == result.count("AT-Content")
-            &&  0 == result.count("residues") ) )
-            {
-                if (residues == "all")
-                {
-                    for (auto res : bp_counter)
-                        std::cout << '#' << std::setw(9) << std::left
-                                    << res.first << ' ';
-                    for (auto res : bp_counter)
-                        std::cout << '%' << std::setw(5) << std::left
-                                    << res.first << ' ';
-                }
-                else
-                {
-                    for (size_t i = 0; i < residues.size(); ++i)
-                        std::cout << '#' << std::setw(9) << std::left
-                                    << residues[i] << ' ';
-                    for (size_t i = 0; i < residues.size(); ++i)
-                        std::cout << '%' << std::setw(5) << std::left
-                                    << residues[i] << ' ';
-                }
-            }
-            if (result.count("AT-Content"))
-                std::cout << std::setw(6) << std::left << "%AT" << ' ';
-            if (result.count("GC-Content"))
-                std::cout << std::setw(6) << std::left << "%GC" << ' ';
-            std::cout << "File" << std::endl;
-
             // printing values
             std::cout << std::setw(10) << std::left << seqsn << ' '
-                        << std::setw(10) << std::left << bpsn << ' ';
+                      << std::setw(10) << std::left << bpsn << ' ';
             if ( result.count("residues")
             || (0 == result.count("GC-Content")
             &&  0 == result.count("AT-Content")
