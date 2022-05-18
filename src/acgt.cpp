@@ -97,6 +97,8 @@ int main(int argc, char* argv[])
             return 1;
         }
 
+        // std::cout << result.arguments().size() << std::endl;
+
         // printing header
         auto& residues = result["residues"].as<std::string>();
         std::cout << std::setw(10) << std::left << "#Seq" << ' '
@@ -180,62 +182,43 @@ int main(int argc, char* argv[])
             &&  0 == result.count("AT-Content")
             &&  0 == result.count("residues") ) )
             {
-                if (residues == "all")
-                {
-                    for (auto res : bp_counter)
-                        std::cout << std::setw(10)
-                                    << std::left
-                                    << res.second
-                                    << ' '
-                                    ;
-                    for (auto res : bp_counter)
-                        std::cout << std::fixed
-                                    << std::setw(5)
-                                    << std::setprecision(2)
-                                    << double(res.second)/bpsn*100
-                                    << "% "
-                                    ;
-                }
-                else
-                {
-                    for (size_t i = 0; i < residues.size(); ++i)
-                        std::cout << std::setw(10) << std::left
-                                    << bp_counter[residues[i]] << ' ';
-                    for (size_t i = 0; i < residues.size(); ++i)
-                        std::cout << std::fixed
-                                    << std::setw(5)
-                                    << std::setprecision(2)
-                                    << double(bp_counter[residues[i]])/bpsn*100
-                                    << "% "
-                                    ;
-                }
+                for (size_t i = 0; i < residues.size(); ++i)
+                    std::cout << std::setw(10) << std::left
+                              << bp_counter[residues[i]] << ' ';
+                for (size_t i = 0; i < residues.size(); ++i)
+                    std::cout << std::fixed
+                              << std::setw(5)
+                              << std::setprecision(2)
+                              << double(bp_counter[residues[i]])/bpsn*100
+                              << "% "
+                            ;
             }
             if (result.count("AT-Content"))
-                std::cout  << std::fixed
-                            << std::setw(5)
-                            << std::setprecision(2)
-                            <<     (double(bp_counter['A'])
-                                +   double(bp_counter['T']))
-                                /  (double(bp_counter['A'])
-                                +   double(bp_counter['T'])
-                                +   double(bp_counter['G'])
-                                +   double(bp_counter['C']))
-                                *   100
-                            <<   "% "
-                            ;
+                std::cout << std::fixed
+                          << std::setw(5)
+                          << std::setprecision(2)
+                          <<    (double(bp_counter['A'])
+                              +  double(bp_counter['T']))
+                              / (double(bp_counter['A'])
+                              +  double(bp_counter['T'])
+                              +  double(bp_counter['G'])
+                              +  double(bp_counter['C']))
+                              *  100
+                          <<   "% "
+                        ;
             if (result.count("GC-Content"))
-                std::cout  << std::fixed
-                            << std::setw(5)
-                            << std::setprecision(2)
-                            <<     (double(bp_counter['G'])
-                                +   double(bp_counter['C']))
-                                /  (double(bp_counter['A'])
-                                +   double(bp_counter['T'])
-                                +   double(bp_counter['G'])
-                                +   double(bp_counter['C']))
-                                *   100
-                            <<   "% "
-                            ;
+                std::cout << std::fixed
+                          << std::setw(5)
+                          << std::setprecision(2)
+                          <<    (double(bp_counter['G'])
+                              +  double(bp_counter['C']))
+                              / (double(bp_counter['A'])
+                              +  double(bp_counter['T'])
+                              +  double(bp_counter['G'])
+                              +  double(bp_counter['C']))
+                              *  100
+                          <<   "% "
+                        ;
             std::cout << file << std::endl;
         }
     }
