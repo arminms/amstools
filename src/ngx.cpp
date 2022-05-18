@@ -1,0 +1,253 @@
+//
+// Copyright (C) 2022 Armin Sobhani <arminms@gmail.com>
+//
+// The MIT License
+//
+
+#include <iostream>
+#include <cstdio>
+#include <iomanip>
+#include <unordered_map>
+#include <numeric>
+
+#include <zlib.h>
+#include <kseq.h>
+#include <cxxopts.hpp>
+
+#include <version.hpp>
+
+KSEQ_INIT(gzFile, gzread)
+
+int main(int argc, char* argv[])
+{
+    // turning sync off before any standard i/o occurs
+    std::cout.sync_with_stdio(false);
+
+    try
+    {
+        cxxopts::Options options("ngx", " (amstools) -- print contig statistics\n");
+        options.custom_help(
+            "[OPTION]... [FILE]...\n"
+            "  ngx [OPTION]... --files-from=F\n\n"
+            "Print the contiguity statistics (e.g. N50, L50) for each FILE.\n"
+            "Both FastA and FastQ (optionally gzipped) files are supported.\n"
+            "Print NG/LG variants if expected genome size is provided.\n\n"
+            "With no FILE, or when FILE is -, read standard input.\n\n"
+            "The options below may be used to select which statistics "
+            "are printed,\nalways in the following order: #Seq, #Res, Nx...,"
+            " Lx..., File.\n"
+        );
+        options.add_options()
+        (   "g,genome-size"
+        ,   "expected genome size\n"
+            "  if G is provided then NGx/LGx values\n"
+            "  will be computed"
+        ,   cxxopts::value<size_t>()
+        ,   "G"
+        )
+        (   "f,files-from"
+        ,   "read input from the files specified by\n"
+            "  names separated by newlines in file F\n"
+            "  If F is - then read names from standard input"
+        ,   cxxopts::value<std::string>()
+        ,   "F"
+        )
+        (   "l,lx-values"
+        ,   "print Lx along with Nx values"
+        )
+        // (   "m,min"
+        // ,   "minimum contig length to be considered\n"
+        //     "  every contig sequence of length shorter\n"
+        //     "  than M will be discarded\n "
+        // ,   cxxopts::value<size_t>()
+        // ->  default_value("1")
+        // ,   "M"
+        // )
+        (   "n,nx-values"
+        ,   "Nx values to be printed (e.g. -n50,90 for N50\n"
+            "  and N90)"
+        ,   cxxopts::value<std::vector<size_t>>()
+        ->  default_value("50")
+        ,   "x..."
+        )
+        (   "help"
+        ,   "display this help and exit"
+        )
+        (   "version"
+        ,   "output version information and exit"
+        )
+        (   "files"
+        ,   "files"
+        ,   cxxopts::value<std::vector<std::string>>()
+        )
+        ;
+
+        options.parse_positional({"files"});
+        options.positional_help("");
+
+        auto result = options.parse(argc, argv);
+
+        if (result.count("help"))
+        {
+            std::cout << options.program()
+                      << options.help()
+                      << std::endl;
+            return 0;
+        }
+
+        if (result.count("version"))
+        {
+            std::cout << options.program()
+                      << AMSTOOLS_VERSION
+                      << std::endl;
+            return 0;
+        }
+
+        if (result.count("files") && result.count("files-from"))
+        {
+            std::cerr << options.program() << ": "
+                        << "file operands cannot be combined with --files-from"
+                        << std::endl;
+            return 1;
+        }
+
+        // making file list
+        std::vector<std::string> file_stdin{ "-" };
+        auto& files_in = result.count("files")
+        ?   result["files"].as<std::vector<std::string>>()
+        :   file_stdin;
+
+        std::vector<std::string> files_from;
+        if (result.count("files-from"))
+        {
+            auto& file = result["files-from"].as<std::string>();
+            gzFile fp = file == "-"
+            ?   gzdopen(fileno(stdin), "r")
+            :   gzopen(file.c_str(), "r");
+            if (nullptr == fp)
+                std::cerr << options.program() << ": "
+                            << "error reading "
+                            << file
+                            << std::endl;
+            kstream_t* ks = ks_init(fp);
+            kstring_t str = {0,0,0};
+            while (ks_getuntil(ks, '\n', &str, 0) >= 0)
+                files_from.emplace_back(str.s);
+            ks_destroy(ks);
+            gzclose(fp);
+            free(str.s);
+        }
+
+        auto& files = result.count("files-from") ? files_from : files_in;
+
+        std::vector<size_t> contig_lengths;
+        for (const auto& file : files)
+        {
+            size_t seqsn{}, bpsn{};
+            gzFile fp = file == "-"
+            ?   gzdopen(fileno(stdin), "r")
+            :   gzopen(file.c_str(), "r");
+            if (nullptr == fp)
+            {
+                std::cerr << options.program() << ": "
+                            << "error reading:\t"
+                            << file
+                            << std::endl;
+                continue;
+            }
+            kseq_t* seq = kseq_init(fp);
+            std::unordered_map<char, size_t> bp_counter(7);
+            while (kseq_read(seq) >= 0)
+            {
+                ++seqsn;
+                bpsn += seq->seq.l;
+                contig_lengths.push_back(seq->seq.l);
+            }
+            kseq_destroy(seq);
+            gzclose(fp);
+
+            // 1. ordering contigs by their lengths from the longest to the
+            //    shortest
+            std::sort(
+                contig_lengths.begin()
+            ,   contig_lengths.end()
+            ,   std::greater<size_t>()
+            );
+
+            // 2. calculate the cutoff value by summing all contigs and
+            //    multiplying by the threshold percentage
+            auto& threshold = result["nx-values"].as<std::vector<size_t>>();
+            std::vector<size_t> cutoff;
+            cutoff.reserve(threshold.size());
+            if (result.count("genome-size"))
+            {
+                auto genome_size = result["genome-size"].as<size_t>();
+                for (auto x : threshold)
+                    cutoff.push_back(genome_size * x / 100);
+            }
+            else
+            {
+                auto genome_size = std::accumulate(
+                    contig_lengths.begin()
+                ,   contig_lengths.end()
+                ,   0 );
+                for (auto x : threshold)
+                    cutoff.push_back(genome_size * x / 100);
+            }
+
+            // 3. compute LN(G)x values
+            std::vector<size_t> lgx_value(cutoff.size());
+            std::vector<size_t> ngx_value(cutoff.size());
+            for (size_t i = 0; i < cutoff.size(); ++i)
+            {
+                for (size_t j = 0; j < contig_lengths.size(); ++j)
+                {
+                    ngx_value[i] += contig_lengths[j];
+                    if (ngx_value[i] >= cutoff[i])
+                    {
+                        lgx_value[i] = j + 1;
+                        ngx_value[i] = contig_lengths[j];
+                        break;
+                    }
+                }
+            }
+
+            // printing header
+            std::cout << std::setw(11) << std::left << "#Seq"
+                      << std::setw(11) << std::left << "#Res";
+            for (size_t i = 0; i < threshold.size(); ++i)
+            {
+                std::string ng = result.count("genome-size") ? "NG" : "N";
+                ng += std::to_string(threshold[i]);
+                std::cout << std::setw(11) << std::left << ng;
+            }
+            if (result.count("lx-values"))
+            {
+                for (size_t i = 0; i < threshold.size(); ++i)
+                {
+                    std::string lg = result.count("genome-size") ? "LG" : "L";
+                    lg += std::to_string(threshold[i]);
+                    std::cout << std::setw(11) << std::left << lg;
+                }
+            }
+            std::cout << "File" << std::endl;
+
+            // printing values
+            std::cout << std::setw(11) << std::left << seqsn
+                      << std::setw(11) << std::left << bpsn;
+            for (size_t i = 0; i < threshold.size(); ++i)
+                std::cout << std::setw(11) << std::left
+                          << ngx_value[i];
+            if (result.count("lx-values"))
+                for (size_t i = 0; i < threshold.size(); ++i)
+                    std::cout << std::setw(11) << std::left
+                            << lgx_value[i];
+            std::cout << file << std::endl;
+        }
+    }
+    catch(const cxxopts::OptionException& e)
+    {
+        std::cerr << "ngx: " << e.what() << std::endl;
+        return 1;
+    }
+}

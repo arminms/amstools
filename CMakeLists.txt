@@ -4,7 +4,7 @@ include(cmake/BuildType.cmake)
 
 project(
   amstools
-  VERSION 0.2
+  VERSION 0.3
   DESCRIPTION "Collection of fast and efficient biological sequence tools"
   LANGUAGES CXX
 )
