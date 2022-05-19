@@ -55,14 +55,14 @@ int main(int argc, char* argv[])
         (   "l,lx-values"
         ,   "print Lx along with Nx values"
         )
-        // (   "m,min"
-        // ,   "minimum contig length to be considered\n"
-        //     "  every contig sequence of length shorter\n"
-        //     "  than M will be discarded\n "
-        // ,   cxxopts::value<size_t>()
-        // ->  default_value("1")
-        // ,   "M"
-        // )
+        (   "m,min"
+        ,   "minimum contig length to be considered\n"
+            "  every contig sequence of length shorter\n"
+            "  than M will be discarded\n "
+        ,   cxxopts::value<size_t>()
+        ->  default_value("1")
+        ,   "M"
+        )
         (   "n,nx-values"
         ,   "Nx values to be printed (e.g. -n50,90 for N50\n"
             "  and N90)"
@@ -140,10 +140,9 @@ int main(int argc, char* argv[])
 
         auto& files = result.count("files-from") ? files_from : files_in;
 
-        std::vector<size_t> contig_lengths;
+        std::vector<size_t> contig_length;
         for (const auto& file : files)
         {
-            size_t seqsn{}, bpsn{};
             gzFile fp = file == "-"
             ?   gzdopen(fileno(stdin), "r")
             :   gzopen(file.c_str(), "r");
@@ -158,23 +157,34 @@ int main(int argc, char* argv[])
             kseq_t* seq = kseq_init(fp);
             std::unordered_map<char, size_t> bp_counter(7);
             while (kseq_read(seq) >= 0)
-            {
-                ++seqsn;
-                bpsn += seq->seq.l;
-                contig_lengths.push_back(seq->seq.l);
-            }
+                contig_length.push_back(seq->seq.l);
             kseq_destroy(seq);
             gzclose(fp);
 
             // 1. ordering contigs by their lengths from the longest to the
             //    shortest
             std::sort(
-                contig_lengths.begin()
-            ,   contig_lengths.end()
+                contig_length.begin()
+            ,   contig_length.end()
             ,   std::greater<size_t>()
             );
 
-            // 2. calculate the cutoff value by summing all contigs and
+            // 2. set the number of contigs and residues
+            auto min_length = result["min"].as<size_t>();
+            auto n_contigs = contig_length.size();
+            if (min_length > 1)
+                for (size_t i = 0; i < contig_length.size(); ++i)
+                    if (contig_length[i] < min_length)
+                    {
+                        n_contigs = i;
+                        break;
+                    }
+            auto n_res = std::accumulate(
+                contig_length.begin()
+            ,   contig_length.begin() + n_contigs
+            ,   0 );
+
+            // 3. calculate the cutoff value by summing all contigs and
             //    multiplying by the threshold percentage
             auto& threshold = result["nx-values"].as<std::vector<size_t>>();
             std::vector<size_t> cutoff;
@@ -187,28 +197,23 @@ int main(int argc, char* argv[])
             }
             else
             {
-                auto genome_size = std::accumulate(
-                    contig_lengths.begin()
-                ,   contig_lengths.end()
-                ,   0 );
                 for (auto x : threshold)
-                    cutoff.push_back(genome_size * x / 100);
+                    cutoff.push_back(n_res * x / 100);
             }
 
-            // 3. compute LN(G)x values
+            // 4. compute LN(G)x values
             std::vector<size_t> lgx_value(cutoff.size());
             std::vector<size_t> ngx_value(cutoff.size());
             for (size_t i = 0; i < cutoff.size(); ++i)
             {
-                for (size_t j = 0; j < contig_lengths.size(); ++j)
+                size_t sum{};
+                for (size_t j = 0; j < n_contigs; ++j)
                 {
-                    ngx_value[i] += contig_lengths[j];
-                    if (ngx_value[i] >= cutoff[i])
-                    {
-                        lgx_value[i] = j + 1;
-                        ngx_value[i] = contig_lengths[j];
+                    lgx_value[i] = j + 1;
+                    ngx_value[i] = contig_length[j];
+                    sum += contig_length[j];
+                    if (sum >= cutoff[i])
                         break;
-                    }
                 }
             }
 
@@ -233,8 +238,8 @@ int main(int argc, char* argv[])
             std::cout << "File" << std::endl;
 
             // printing values
-            std::cout << std::setw(11) << std::left << seqsn
-                      << std::setw(11) << std::left << bpsn;
+            std::cout << std::setw(11) << std::left << n_contigs
+                      << std::setw(11) << std::left << n_res;
             for (size_t i = 0; i < threshold.size(); ++i)
                 std::cout << std::setw(11) << std::left
                           << ngx_value[i];
@@ -249,5 +254,9 @@ int main(int argc, char* argv[])
     {
         std::cerr << "ngx: " << e.what() << std::endl;
         return 1;
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "ngx: " << e.what() << std::endl;
     }
 }
