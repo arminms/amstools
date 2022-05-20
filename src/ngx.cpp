@@ -33,9 +33,9 @@ int main(int argc, char* argv[])
             "Both FastA and FastQ (optionally gzipped) files are supported.\n"
             "Print NG/LG variants if expected genome size is provided.\n\n"
             "With no FILE, or when FILE is -, read standard input.\n\n"
-            "The options below may be used to select which statistics "
-            "are printed,\nalways in the following order: #Seq, #Res, Nx...,"
-            " Lx..., File.\n"
+            "The options below may be used to select which statistics are "
+            "printed,\nalways in the following order: #Seq, #Res, Min, Max,"
+            " N(G)x..., L(G)x..., File.\n"
         );
         options.add_options()
         (   "g,genome-size"
@@ -69,6 +69,9 @@ int main(int argc, char* argv[])
         ,   cxxopts::value<std::vector<size_t>>()
         ->  default_value("50")
         ,   "x..."
+        )
+        (   "s,sequence-lengths"
+        ,   "print sequence lengths statistics"
         )
         (   "help"
         ,   "display this help and exit"
@@ -220,6 +223,11 @@ int main(int argc, char* argv[])
             // printing header
             std::cout << std::setw(11) << std::left << "#Seq"
                       << std::setw(11) << std::left << "#Res";
+            if (result.count("sequence-lengths"))
+            {
+                std::cout << std::setw(11) << std::left << "Min"
+                          << std::setw(11) << std::left << "Max";
+            }
             for (size_t i = 0; i < threshold.size(); ++i)
             {
                 std::string ng = result.count("genome-size") ? "NG" : "N";
@@ -240,6 +248,11 @@ int main(int argc, char* argv[])
             // printing values
             std::cout << std::setw(11) << std::left << n_contigs
                       << std::setw(11) << std::left << n_res;
+            if (result.count("sequence-lengths"))
+                std::cout << std::setw(11) << std::left
+                          << contig_length[n_contigs - 1] // min
+                          << std::setw(11) << std::left
+                          << contig_length[0];  // max
             for (size_t i = 0; i < threshold.size(); ++i)
                 std::cout << std::setw(11) << std::left
                           << ngx_value[i];
