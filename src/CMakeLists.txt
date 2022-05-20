@@ -19,7 +19,7 @@ foreach(PROG ${PROGS})
     ZLIB::ZLIB
     cxxopts::cxxopts
   )
-  install(TARGETS ${PROG_TARGET} RUNTIME DESTINATION bin COMPONENT ${PROG_TARGET})
+  install(TARGETS ${PROG_TARGET} RUNTIME)
 endforeach()
 
 macro(do_test prog arg result)
