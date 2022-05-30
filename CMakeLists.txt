@@ -42,6 +42,6 @@ if(NOT cxxopts_DIR)
     FetchContent_MakeAvailable(cxxopts)
 endif()
 
-include(CTest)
+enable_testing()
 
 add_subdirectory(src)
