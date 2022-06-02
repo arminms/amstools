@@ -142,6 +142,32 @@ int main(int argc, char* argv[])
         }
 
         auto& files = result.count("files-from") ? files_from : files_in;
+        auto& threshold = result["nx-values"].as<std::vector<size_t>>();
+
+        // printing header
+        std::cout << std::setw(11) << std::left << "#Seq"
+                  << std::setw(11) << std::left << "#Res";
+        if (result.count("sequence-lengths"))
+        {
+            std::cout << std::setw(11) << std::left << "Min"
+                      << std::setw(11) << std::left << "Max";
+        }
+        for (size_t i = 0; i < threshold.size(); ++i)
+        {
+            std::string ng = result.count("genome-size") ? "NG" : "N";
+            ng += std::to_string(threshold[i]);
+            std::cout << std::setw(11) << std::left << ng;
+        }
+        if (result.count("lx-values"))
+        {
+            for (size_t i = 0; i < threshold.size(); ++i)
+            {
+                std::string lg = result.count("genome-size") ? "LG" : "L";
+                lg += std::to_string(threshold[i]);
+                std::cout << std::setw(11) << std::left << lg;
+            }
+        }
+        std::cout << "File" << std::endl;
 
         std::vector<size_t> contig_length;
         for (const auto& file : files)
@@ -189,7 +215,6 @@ int main(int argc, char* argv[])
 
             // 3. calculate the cutoff value by summing all contigs and
             //    multiplying by the threshold percentage
-            auto& threshold = result["nx-values"].as<std::vector<size_t>>();
             std::vector<size_t> cutoff;
             cutoff.reserve(threshold.size());
             if (result.count("genome-size"))
@@ -219,31 +244,6 @@ int main(int argc, char* argv[])
                         break;
                 }
             }
-
-            // printing header
-            std::cout << std::setw(11) << std::left << "#Seq"
-                      << std::setw(11) << std::left << "#Res";
-            if (result.count("sequence-lengths"))
-            {
-                std::cout << std::setw(11) << std::left << "Min"
-                          << std::setw(11) << std::left << "Max";
-            }
-            for (size_t i = 0; i < threshold.size(); ++i)
-            {
-                std::string ng = result.count("genome-size") ? "NG" : "N";
-                ng += std::to_string(threshold[i]);
-                std::cout << std::setw(11) << std::left << ng;
-            }
-            if (result.count("lx-values"))
-            {
-                for (size_t i = 0; i < threshold.size(); ++i)
-                {
-                    std::string lg = result.count("genome-size") ? "LG" : "L";
-                    lg += std::to_string(threshold[i]);
-                    std::cout << std::setw(11) << std::left << lg;
-                }
-            }
-            std::cout << "File" << std::endl;
 
             // printing values
             std::cout << std::setw(11) << std::left << n_contigs
