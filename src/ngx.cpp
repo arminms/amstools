@@ -169,9 +169,10 @@ int main(int argc, char* argv[])
         }
         std::cout << "File" << std::endl;
 
-        std::vector<size_t> contig_length;
         for (const auto& file : files)
         {
+            std::vector<size_t> contig_length;
+
             gzFile fp = file == "-"
             ?   gzdopen(fileno(stdin), "r")
             :   gzopen(file.c_str(), "r");
