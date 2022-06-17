@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
             :   gzopen(file.c_str(), "r");
             if (nullptr == fp)
                 std::cerr << options.program() << ": "
-                            << "error reading "
+                            << "Error reading "
                             << file
                             << std::endl;
             kstream_t* ks = ks_init(fp);
@@ -144,19 +144,26 @@ int main(int argc, char* argv[])
         auto& files = result.count("files-from") ? files_from : files_in;
         auto& threshold = result["nx-values"].as<std::vector<size_t>>();
 
-        // printing header
-        std::cout << std::setw(11) << std::left << "#Seq"
-                  << std::setw(11) << std::left << "#Res";
+        // calculating number of columns
+        size_t nc = 3 + threshold.size();
+        nc += result.count("sequence-lengths") ? 2 : 0;
+        nc += result.count("lx-values") ? threshold.size() : 0;
+        std::vector<std::string> table;
+        table.reserve( (files.size() + 1) * nc);
+
+        // adding header to the table
+        table.emplace_back("#Seq");
+        table.emplace_back("#Res");
         if (result.count("sequence-lengths"))
         {
-            std::cout << std::setw(11) << std::left << "Min"
-                      << std::setw(11) << std::left << "Max";
+            table.emplace_back("Min");
+            table.emplace_back("Max");
         }
         for (size_t i = 0; i < threshold.size(); ++i)
         {
             std::string ng = result.count("genome-size") ? "NG" : "N";
             ng += std::to_string(threshold[i]);
-            std::cout << std::setw(11) << std::left << ng;
+            table.emplace_back(ng);
         }
         if (result.count("lx-values"))
         {
@@ -164,10 +171,10 @@ int main(int argc, char* argv[])
             {
                 std::string lg = result.count("genome-size") ? "LG" : "L";
                 lg += std::to_string(threshold[i]);
-                std::cout << std::setw(11) << std::left << lg;
+                table.emplace_back(lg);
             }
         }
-        std::cout << "File" << std::endl;
+        table.emplace_back("File");
 
         for (const auto& file : files)
         {
@@ -179,7 +186,7 @@ int main(int argc, char* argv[])
             if (nullptr == fp)
             {
                 std::cerr << options.program() << ": "
-                            << "error reading:\t"
+                            << "Error reading "
                             << file
                             << std::endl;
                 continue;
@@ -246,31 +253,40 @@ int main(int argc, char* argv[])
                 }
             }
 
-            // printing values
-            std::cout << std::setw(11) << std::left << n_contigs
-                      << std::setw(11) << std::left << n_res;
+            // adding values to the table
+            table.emplace_back(std::to_string(n_contigs));
+            table.emplace_back(std::to_string(n_res));
             if (result.count("sequence-lengths"))
-                std::cout << std::setw(11) << std::left
-                          << contig_length[n_contigs - 1] // min
-                          << std::setw(11) << std::left
-                          << contig_length[0];  // max
+            {
+                table.emplace_back(std::to_string(contig_length[n_contigs - 1]));
+                table.emplace_back(std::to_string(contig_length[0]));
+            }
             for (size_t i = 0; i < threshold.size(); ++i)
-                std::cout << std::setw(11) << std::left
-                          << ngx_value[i];
+                table.emplace_back(std::to_string(ngx_value[i]));
             if (result.count("lx-values"))
                 for (size_t i = 0; i < threshold.size(); ++i)
-                    std::cout << std::setw(11) << std::left
-                            << lgx_value[i];
-            std::cout << file << std::endl;
+                    table.emplace_back(std::to_string(lgx_value[i]));
+            table.emplace_back(file);
+
+            // calculating column widths
+            std::vector<size_t> cw(nc);
+            for (size_t i = 0; i < files.size() + 1; ++i)
+                for (size_t j = 0; j < nc; ++j)
+                    if (table[i * nc + j].length() + 2 > cw[j])
+                        cw[j] = table[i * nc + j].length() + 2;
+
+            // printing the table
+            for (size_t i = 0; i < files.size() + 1; ++i)
+            {
+                for (size_t j = 0; j < nc; ++j)
+                    std::cout << std::setw(cw[j]) << std::left << table[i * nc + j];
+                std::cout << std::endl;
+            }
         }
-    }
-    catch(const cxxopts::OptionException& e)
-    {
-        std::cerr << "ngx: " << e.what() << std::endl;
-        return 1;
     }
     catch (std::exception& e)
     {
         std::cerr << "ngx: " << e.what() << std::endl;
+        return 1;
     }
 }
