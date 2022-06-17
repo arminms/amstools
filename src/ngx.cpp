@@ -267,21 +267,21 @@ int main(int argc, char* argv[])
                 for (size_t i = 0; i < threshold.size(); ++i)
                     table.emplace_back(std::to_string(lgx_value[i]));
             table.emplace_back(file);
+        }
 
-            // calculating column widths
-            std::vector<size_t> cw(nc);
-            for (size_t i = 0; i < files.size() + 1; ++i)
-                for (size_t j = 0; j < nc; ++j)
-                    if (table[i * nc + j].length() + 2 > cw[j])
-                        cw[j] = table[i * nc + j].length() + 2;
+        // calculating column widths
+        std::vector<size_t> cw(nc);
+        for (size_t i = 0; i < files.size() + 1; ++i)
+            for (size_t j = 0; j < nc; ++j)
+                if (table[i * nc + j].length() + 2 > cw[j])
+                    cw[j] = table[i * nc + j].length() + 2;
 
-            // printing the table
-            for (size_t i = 0; i < files.size() + 1; ++i)
-            {
-                for (size_t j = 0; j < nc; ++j)
-                    std::cout << std::setw(cw[j]) << std::left << table[i * nc + j];
-                std::cout << std::endl;
-            }
+        // printing the table
+        for (size_t i = 0; i < files.size() + 1; ++i)
+        {
+            for (size_t j = 0; j < nc; ++j)
+                std::cout << std::setw(cw[j]) << std::left << table[i * nc + j];
+            std::cout << std::endl;
         }
     }
     catch (std::exception& e)
