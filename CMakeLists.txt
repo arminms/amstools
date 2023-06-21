@@ -4,7 +4,7 @@ include(cmake/BuildType.cmake)
 
 project(
   amstools
-  VERSION 0.3
+  VERSION 0.4
   DESCRIPTION "Collection of fast and efficient biological sequence tools"
   LANGUAGES CXX
 )
@@ -29,15 +29,15 @@ find_package(ZLIB)
 #
 find_package(
   cxxopts CONFIG
-  HINTS /usr/local /opt/local /opt $ENV{HOME}
+  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /usr
 )
-if(NOT cxxopts_DIR)
+if(NOT cxxopts_FOUND)
     message(STATUS "Fetching cxxopts library...")
     include(FetchContent)
     FetchContent_Declare(
       cxxopts
       GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-      # GIT_TAG        v3.0.0
+      GIT_TAG        v3.1.1
     )
     FetchContent_MakeAvailable(cxxopts)
 endif()

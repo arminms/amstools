@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    catch(const cxxopts::OptionException& e)
+    catch(std::exception& e)
     {
         std::cerr << "sc: " << e.what() << std::endl;
         return 1;

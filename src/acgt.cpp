@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
             std::cout << file << std::endl;
         }
     }
-    catch(const cxxopts::OptionException& e)
+    catch(std::exception& e)
     {
         std::cerr << "acgt: " << e.what() << std::endl;
         return 1;
